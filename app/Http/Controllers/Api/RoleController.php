@@ -71,10 +71,12 @@ class RoleController extends Controller
     public function store(CreateRoleRequest $request): JsonResponse
     {
         try {
+            $data = $request->validated();
+            
             $roleDTO = new RoleDTO(
-                $request->input('name'),
-                $request->input('code'),
-                $request->input('description')
+                $data['name'],
+                $data['code'],
+                $data['description'] ?? null
             );
 
             $createdRole = $this->roleService->createRole($roleDTO);
@@ -97,17 +99,19 @@ class RoleController extends Controller
     public function update(UpdateRoleRequest $request, int $id): JsonResponse
     {
         try {
-            $role = $this->roleService->getRoleById($id); // This should return a RoleDTO
+            $role = $this->roleService->getRoleById($id);
 
             if (!$role) {
                 return $this->errorResponse('Role not found', 404);
             }
 
+            $data = $request->validated();
+            
             // Use RoleDTO getter methods to provide fallback values
             $roleDTO = new RoleDTO(
-                $request->input('name', $role->getName()),
-                $request->input('code', $role->getCode()),
-                $request->input('description', $role->getDescription()),
+                $data['name'] ?? $role->getName(),
+                $data['code'] ?? $role->getCode(),
+                $data['description'] ?? $role->getDescription(),
                 $id
             );
 

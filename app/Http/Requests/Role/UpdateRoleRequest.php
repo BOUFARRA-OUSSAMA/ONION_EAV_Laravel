@@ -22,9 +22,8 @@ class UpdateRoleRequest extends FormRequest
      */
     public function rules(): array
     {
-        // This references the {role} in your route, which is correct
-        // for Route::apiResource('roles', RoleController::class);
-        $roleId = $this->route()->parameter('role');
+        // Use the route parameter 'role' as defined in Route::apiResource('roles', RoleController::class)
+        $roleId = request()->route('role');
 
         return [
             'name' => 'sometimes|required|string|max:255',

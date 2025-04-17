@@ -43,15 +43,28 @@ class EloquentRoleRepository implements RoleRepositoryInterface
     }
 
     /**
-     * Get all roles
+     * Find roles by criteria
      *
+     * @param array $criteria
      * @return array
      */
-    public function findAll(): array
+    public function findByCriteria(array $criteria): array
     {
-        $roleModels = RoleModel::all();
-
-        return $roleModels->map([$this, 'mapToDomainEntity'])->toArray();
+        $query = RoleModel::query();
+        
+        if (isset($criteria['name'])) {
+            $query->where('name', 'like', '%' . $criteria['name'] . '%');
+        }
+        
+        if (isset($criteria['code'])) {
+            $query->where('code', 'like', '%' . $criteria['code'] . '%');
+        }
+        
+        $roleModels = $query->get();
+        
+        return $roleModels->map(function ($roleModel) {
+            return $this->mapToDomainEntity($roleModel);
+        })->toArray();
     }
 
     /**
@@ -65,21 +78,16 @@ class EloquentRoleRepository implements RoleRepositoryInterface
         $attributes = [
             'name' => $role->getName(),
             'code' => $role->getCode(),
-            'description' => $role->getDescription(),
+            'description' => $role->getDescription()
         ];
-
+        
         if ($role->getId()) {
             $roleModel = RoleModel::find($role->getId());
-
-            if (!$roleModel) {
-                throw new \RuntimeException('Role not found');
-            }
-
             $roleModel->update($attributes);
         } else {
             $roleModel = RoleModel::create($attributes);
         }
-
+        
         return $this->mapToDomainEntity($roleModel);
     }
 
@@ -91,32 +99,32 @@ class EloquentRoleRepository implements RoleRepositoryInterface
      */
     public function delete(RoleEntity $role): bool
     {
-        if (!$role->getId()) {
-            throw new \RuntimeException('Cannot delete role without ID');
-        }
-
         $roleModel = RoleModel::find($role->getId());
-
+        
         if (!$roleModel) {
             return false;
         }
-
+        
         return $roleModel->delete();
     }
 
     /**
-     * Map a role model to a domain entity
+     * Map a Role model to a domain entity
      *
      * @param RoleModel $roleModel
      * @return RoleEntity
      */
     private function mapToDomainEntity(RoleModel $roleModel): RoleEntity
     {
-        return new RoleEntity(
+        $role = new RoleEntity(
             $roleModel->name,
             $roleModel->code,
-            $roleModel->description,
-            $roleModel->id
+            $roleModel->description
         );
+        
+        // Set the ID after creation
+        $role->setId($roleModel->id);
+        
+        return $role;
     }
 }
