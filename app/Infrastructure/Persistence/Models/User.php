@@ -7,11 +7,10 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use App\Application\Services\EAVService;
-use App\Domain\Traits\HasAttributes as HasAttributesTrait;
 
 class User extends Authenticatable
 {
-    use HasApiTokens,HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -21,9 +20,9 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'password',
         'phone',
         'status',
-        'password',
     ];
 
     /**
@@ -79,9 +78,19 @@ class User extends Authenticatable
             return parent::getAttribute($attributeCode);
         }
 
+        // Skip EAV attributes if ID is not set
+        if (!isset($this->attributes['id']) || empty($this->attributes['id'])) {
+            return null;
+        }
+
         // Otherwise, try to get it as an EAV attribute
-        $eavService = app(EAVService::class);
-        return $eavService->getAttributeValue('user', $this->id, $attributeCode);
+        try {
+            $eavService = app(EAVService::class);
+            return $eavService->getAttributeValue('user', $this->attributes['id'], $attributeCode);
+        } catch (\Exception $e) {
+            // Fail gracefully
+            return null;
+        }
     }
 
     /**
@@ -102,9 +111,20 @@ class User extends Authenticatable
             return parent::setAttribute($attributeCode, $value);
         }
 
+        // Skip EAV attributes if ID is not set
+        if (!isset($this->attributes['id']) || empty($this->attributes['id'])) {
+            // Store for later processing if needed
+            $this->attributes[$attributeCode] = $value;
+            return;
+        }
+
         // Otherwise, set it as an EAV attribute
-        $eavService = app(EAVService::class);
-        $eavService->setAttributeValue('user', $this->id, $attributeCode, $value);
+        try {
+            $eavService = app(EAVService::class);
+            $eavService->setAttributeValue('user', $this->attributes['id'], $attributeCode, $value);
+        } catch (\Exception $e) {
+            // Fail gracefully
+        }
     }
 
     /**
